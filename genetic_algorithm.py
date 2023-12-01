@@ -1,6 +1,5 @@
 import copy
 import random
-import math
 
 
 # 0 - horizontal
@@ -11,10 +10,19 @@ class Word:
         self.x = x_coord
         self.y = y_coord
         self.orientation = orientation
+        self.occupied_cells = get_filled_cells(self)
 
     def __str__(self):
         return f"{self.word}, x: {self.x}, y: {self.y}, {'horizontal' if self.orientation == 0 else 'vertical'}"
 
+    def __len__(self):
+        length = 0
+        while length < len(self.word):
+            length += 1
+        return length
+
+    def __getitem__(self, index):
+        return self.word[index]
 
 class Crossword:
     def __init__(self, list_of_words):
@@ -26,202 +34,6 @@ class Crossword:
         for word in self.words:
             to_print += str(word) + "\n"
         return to_print
-
-    # def count_fitness(self) -> float:
-    #     corner_problems = 0
-    #     border_problems = 0
-    #     intersection_problems = 0
-    #     intersection_successes = 0
-    #     filled_cells_list = set()
-    #     num_of_intersections = 0
-    #
-    #     # Intersection problems check
-    #     for word in self.words:
-    #         has_intersections = False
-    #         for i in range(len(word.word)):
-    #             if word.orientation == 0:
-    #                 if (word.x, word.y + i) not in filled_cells_list:
-    #                     filled_cells_list.add((word.x, word.y + i))
-    #                 else:
-    #                     has_intersections = True
-    #                     for vertical_word in self.words:
-    #                         if vertical_word.orientation == 1:
-    #                             if (word.y + i == vertical_word.y and vertical_word.x < word.x < vertical_word.x +
-    #                                     len(vertical_word.word)):
-    #                                 if word.word[i] != vertical_word.word[abs(vertical_word.x - word.x)]:
-    #                                     intersection_problems += 1
-    #                                 else:
-    #                                     intersection_successes += 1
-    #                                 break
-    #             else:
-    #                 if (word.x + i, word.y) not in filled_cells_list:
-    #                     filled_cells_list.add((word.x + i, word.y))
-    #         if has_intersections: num_of_intersections += 1
-    #
-    #     for word in self.words:
-    #         if word.orientation == 1:
-    #             # Corner problems check
-    #             if (word.x - 1, word.y) in filled_cells_list:
-    #                 corner_problems += 1
-    #             if (word.x - 1, word.y - 1) in filled_cells_list:
-    #                 corner_problems += 1
-    #             if (word.x - 1, word.y + 1) in filled_cells_list:
-    #                 corner_problems += 1
-    #             if (word.x + len(word.word), word.y) in filled_cells_list:
-    #                 corner_problems += 1
-    #             if (word.x + len(word.word), word.y - 1) in filled_cells_list:
-    #                 corner_problems += 1
-    #             if (word.x + len(word.word), word.y + 1) in filled_cells_list:
-    #                 corner_problems += 1
-    #
-    #             # Border problems check
-    #             border_problems_left = False
-    #             border_problems_right = False
-    #             for i in range(1, len(word.word)):
-    #                 if (word.x + i, word.y - 1) in filled_cells_list and (word.x + i - 1, word.y - 1) in filled_cells_list:
-    #                     border_problems_left = True
-    #                 if (word.x + i, word.y + 1) in filled_cells_list and (word.x + i - 1, word.y + 1) in filled_cells_list:
-    #                     border_problems_right = True
-    #             border_problems += 1 if border_problems_left else 0
-    #             border_problems += 1 if border_problems_right else 0
-    #
-    #     fitness_function_score = (- 2000 * corner_problems - 100 * border_problems - 0.5 * intersection_problems + 10000 * intersection_successes + num_of_intersections * 5)
-    #     return fitness_function_score
-
-    def parallel_neighbours_counter(self) -> int:
-        parallel_neighbours = 0
-        for i in range(len(self.words)):
-            for j in range(i + 1, len(self.words)):
-                if self.words[i].orientation == self.words[j].orientation:
-                    if self.words[i].orientation == 0 and abs(self.words[i].x - self.words[j].x) == 1 :
-                        filled_cells = set()
-                        for letter_index in range(len(self.words[j].word)):
-                            filled_cells.add(self.words[j].y + letter_index)
-                        for letter_index in range(len(self.words[i].word)):
-                            if self.words[i].y + letter_index in filled_cells:
-                                parallel_neighbours += 1
-                                break
-                    if self.words[i].orientation == 1 and abs(self.words[i].y - self.words[j].y) == 1:
-                        filled_cells = set()
-                        for letter_index in range(len(self.words[j].word)):
-                            filled_cells.add(self.words[j].x + letter_index)
-                        for letter_index in range(len(self.words[i].word)):
-                            if self.words[i].x + letter_index in filled_cells:
-                                parallel_neighbours += 1
-                                break
-        return parallel_neighbours // 2
-
-    def words_connection_counter(self) -> int:
-        def dfs(x, y):
-            if x < 0 or x >= 20 or y < 0 or y >= 20 or (x, y) in visited:
-                return
-            visited.add((x, y))
-            for i in range(len(self.words)):
-                w = self.words[i]
-                for j in range(len(w.word)):
-                    if w.orientation == 0 and (x, y) == (w.x + j, w.y):
-                        for k in range(len(w.word)):
-                            dfs(w.x + k, w.y)
-                    elif w.orientation == 1 and (x, y) == (w.x, w.y + j):
-                        for k in range(len(w.word)):
-                            dfs(w.x, w.y + k)
-        visited = set()
-        for word in self.words:
-            dfs(word.x, word.y)
-        return len(visited)
-
-    def overlaps_counter(self) -> int:
-        overlaps = 0
-        filled_cells = set()
-        overlapped_cells = set()
-
-        for word in self.words:
-            for i in range(len(word.word)):
-                cell = (word.x + i, word.y) if word.orientation == 0 else (word.x, word.y + i)
-                if cell in filled_cells:
-                    overlapped_cells.add(cell)
-                filled_cells.add(cell)
-        return overlaps
-
-    def intersection_counter(self) -> [int, int]:
-        incorrect_intersections = 0
-        correct_intersections = 0
-        filled_cells = set()
-        for word in self.words:
-            for i in range(len(word.word)):
-                cell = (word.x + i, word.y) if word.orientation == 0 else (word.x, word.y + i)
-                if cell in filled_cells:
-                    for intersected_word in self.words:
-                        if (
-                            intersected_word.orientation == 1
-                            and cell[0] == intersected_word.x
-                            and intersected_word.y < cell[1] < intersected_word.y + len(intersected_word.word)
-                        ):
-                            if word.word[i] != intersected_word.word[abs(intersected_word.y - cell[1])]:
-                                incorrect_intersections += 1
-                            else:
-                                correct_intersections += 1
-                            break
-                filled_cells.add(cell)
-        return [incorrect_intersections, correct_intersections]
-
-    def corner_counter(self) -> [int, int]: # incorrect, correct
-        corner_problems = 0
-        corners = 0
-        filled_cells = set()
-        for word in self.words:
-            if word.orientation == 0:
-                for i in range(len(word.word)):
-                    filled_cells.add((word.x, word.y+i))
-                    if 0 <= word.x <= 19 and 0 <= word.y+i <= 19:
-                        corners += 1
-            else:
-                for i in range(len(word.word)):
-                    filled_cells.add((word.x+i, word.y))
-                    if 0 <= word.x+i <= 19 and 0 <= word.y <= 19:
-                        corners += 1
-
-        for word in self.words:
-            if word.orientation == 1:
-                if (word.x - 1, word.y) in filled_cells:
-                    corner_problems += 1
-                if (word.x - 1, word.y - 1) in filled_cells:
-                    corner_problems += 1
-                if (word.x - 1, word.y + 1) in filled_cells:
-                    corner_problems += 1
-                if (word.x + len(word.word), word.y) in filled_cells:
-                    corner_problems += 1
-                if (word.x + len(word.word), word.y - 1) in filled_cells:
-                    corner_problems += 1
-                if (word.x + len(word.word), word.y + 1) in filled_cells:
-                    corner_problems += 1
-            else:
-                if (word.x, word.y - 1) in filled_cells:
-                    corner_problems +=1
-                if (word.x - 1, word.y - 1) in filled_cells:
-                    corner_problems += 1
-                if (word.x + 1, word.y - 1) in filled_cells:
-                    corner_problems += 1
-                if (word.x, word.y + len(word.word)) in filled_cells:
-                    corner_problems += 1
-                if (word.x - 1, word.y+len(word.word)) in filled_cells:
-                    corner_problems += 1
-                if (word.x + 1, word.y + len(word.word)) in filled_cells:
-                    corner_problems += 1
-        return [corner_problems, corners - corner_problems]
-
-    def new_fitness_counter(self) -> float:
-        overlaps = self.overlaps_counter()
-        correct_intersections = self.intersection_counter()[1]
-        fitness = (- self.parallel_neighbours_counter()
-                   + 10 * self.words_connection_counter() / len(self.words)
-                   - (overlaps - correct_intersections)
-                   - self.intersection_counter()[0] + 5 * correct_intersections
-                   - self.corner_counter()[0] + 5 * self.corner_counter()[1])
-        if self.overlaps_counter() == self.intersection_counter()[1]:
-            fitness += 5
-        return fitness
-
 
     def print_crossword(self):
         crossword = [['.' for _ in range(20)] for _ in range(20)]
@@ -240,6 +52,263 @@ class Crossword:
                 cur_line += crossword[i][j] + ' '
             print(cur_line)
         return
+
+    def parallel_neighbours_counter(self) -> int:
+        parallel_neighbours = 0
+        visited_pairs = set()
+        counted_words = set()
+
+        for i in range(len(self.words)):
+            for j in range(i + 1, len(self.words)):
+                if self.words[i].orientation == self.words[j].orientation:
+                    pair = (min(i, j), max(i, j))
+                    if pair not in visited_pairs:
+                        visited_pairs.add(pair)
+                        if self.words[i].orientation == 0:
+                            if abs(self.words[i].x - self.words[j].x) == 1:
+                                cells_of_first_word = set()
+                                for k in range(len(self.words[i].word)):
+                                    cells_of_first_word.add(self.words[i].y + k)
+
+                                for k in range(len(self.words[j].word)):
+                                    if (self.words[j].y + k) in cells_of_first_word:
+                                        parallel_neighbours += 1
+                                        if self.words[j] not in counted_words and self.words[i] not in counted_words:
+                                            parallel_neighbours += 1
+                                            counted_words.add(self.words[j])
+                                            counted_words.add(self.words[i])
+                                        break
+                        else:
+                            if abs(self.words[i].y - self.words[j].y) == 1:
+                                cells_of_first_word = set()
+                                for k in range(len(self.words[i].word)):
+                                    cells_of_first_word.add(self.words[i].x + k)
+
+                                for k in range(len(self.words[j].word)):
+                                    if (self.words[j].x + k) in cells_of_first_word:
+                                        parallel_neighbours += 1
+                                        if self.words[j] not in counted_words and self.words[i] not in counted_words:
+                                            parallel_neighbours += 1
+                                            counted_words.add(self.words[j])
+                                            counted_words.add(self.words[i])
+                                        break
+        return parallel_neighbours
+
+    def not_connected_words_counter(self) -> int:
+        filled_cells = set()
+        for word in self.words:
+            filled_cells.union(word.occupied_cells)
+
+        # connected_words = set()
+        has_intersections_with_other_words = [0 for _ in range(len(self.words))]
+        index = 0
+        for word in self.words:
+            word.occupied_cells = get_filled_cells(word)
+
+        for word in self.words:
+            for other_word in self.words:
+                if other_word.orientation == 1 - word.orientation:
+                    if word.occupied_cells.intersection(other_word.occupied_cells):
+                        has_intersections_with_other_words[index] = 1
+                        break
+            index += 1
+        return len(self.words) - sum(has_intersections_with_other_words)
+
+    def overlaps_counter(self) -> int:
+        overlapped_words = set()
+        for word in self.words:
+            for other_word in self.words:
+                if word != other_word and word.orientation == other_word.orientation and word.occupied_cells.intersection(
+                        other_word.occupied_cells):
+                    overlapped_words.add(word)
+                    overlapped_words.add(word)
+        return len(overlapped_words)
+
+    def new_intersection_counter(self) -> [int, int]:
+        incorrect_intersections = 0
+        correct_intersections = 0
+
+        for word in self.words:
+            word.occupied_cells = get_filled_cells(word)
+
+        for word in self.words:
+            for other_word in self.words:
+                if word.orientation != other_word.orientation:
+                    location = word.occupied_cells.intersection(other_word.occupied_cells)
+                    if location and set(word.word).intersection(set(other_word.word)):
+                        word_letter, other_word_letter = '[', ']'
+                        if word.orientation == 0:
+                            for i in range(len(word)):
+                                if {(word.x, word.y + i)} == location:
+                                    word_letter = word.word[i]
+                                    break
+                            for i in range(len(other_word)):
+                                if {(other_word.x + i, other_word.y)} == location:
+                                    other_word_letter = other_word.word[i]
+                                    break
+                            if word_letter != other_word_letter:
+                                incorrect_intersections += 1
+                            else:
+                                correct_intersections += 1
+        return [incorrect_intersections, correct_intersections]
+
+    def corner_counter(self) -> [int, int]:  # incorrect, correct
+        def within_bounds(x, y):
+            return 0 <= x <= 19 and 0 <= y <= 19
+
+        def get_horizontal_corners(word):
+            x_s, y_s = word.x, word.y
+            x_e, y_e = x_s + len(word.word) - 1, y_s
+
+            corners = [
+                (x_s - 1, y_s),
+                (x_s - 1, y_s - 1),
+                (x_s - 1, y_s + 1),
+                (x_e + 1, y_e),
+                (x_e + 1, y_e - 1),
+                (x_e + 1, y_e + 1)
+            ]
+            return [corner for corner in corners if within_bounds(*corner)]
+
+        def get_vertical_corners(word):
+            x_s, y_s = word.x, word.y
+            x_e, y_e = x_s, y_s + len(word.word) - 1
+
+            corners = [
+                (x_s, y_s - 1),
+                (x_s - 1, y_s - 1),
+                (x_s + 1, y_s - 1),
+                (x_e, y_e + 1),
+                (x_e - 1, y_e + 1),
+                (x_e + 1, y_e + 1)
+            ]
+            return [corner for corner in corners if within_bounds(*corner)]
+
+        corner_problems = 0
+        available_corners = 0
+        filled_cells = set()
+        for word in self.words:
+            if word.orientation == 0:
+                available_corners += len(get_horizontal_corners(word))
+                for i in range(len(word.word)):
+                    filled_cells.add((word.x, word.y + i))
+            else:
+                available_corners += len(get_vertical_corners(word))
+                for i in range(len(word.word)):
+                    filled_cells.add((word.x + i, word.y))
+
+        for word in self.words:
+            if word.orientation == 1:
+                if (word.x - 1, word.y) in filled_cells:
+                    corner_problems += 1
+                if (word.x - 1, word.y - 1) in filled_cells:
+                    corner_problems += 1
+                if (word.x - 1, word.y + 1) in filled_cells:
+                    corner_problems += 1
+                if (word.x + len(word.word), word.y) in filled_cells:
+                    corner_problems += 1
+                if (word.x + len(word.word), word.y - 1) in filled_cells:
+                    corner_problems += 1
+                if (word.x + len(word.word), word.y + 1) in filled_cells:
+                    corner_problems += 1
+
+            else:
+                if (word.x, word.y - 1) in filled_cells:
+                    corner_problems += 1
+                if (word.x - 1, word.y - 1) in filled_cells:
+                    corner_problems += 1
+                if (word.x + 1, word.y - 1) in filled_cells:
+                    corner_problems += 1
+                if (word.x, word.y + len(word.word)) in filled_cells:
+                    corner_problems += 1
+                if (word.x - 1, word.y + len(word.word)) in filled_cells:
+                    corner_problems += 1
+                if (word.x + 1, word.y + len(word.word)) in filled_cells:
+                    corner_problems += 1
+        return [corner_problems / available_corners, (available_corners - corner_problems) / available_corners]
+
+    def words_fit_grid(self) -> int:
+        words_fit_counter = len(self.words)
+        for word in self.words:
+            if word.orientation == 0:
+                if word.y + len(word.word) > 20:
+                    words_fit_counter -= 1
+            else:
+                if word.x + len(word.word) > 20:
+                    words_fit_counter -= 1
+        return words_fit_counter
+
+    def new_fitness_counter(self) -> float:
+        for word in self.words:
+            word.occupied_cells = get_filled_cells(word)
+
+        overlapped_words_number = self.overlaps_counter()  # up to 10
+        not_overlapped_words_number = len(self.words) - overlapped_words_number
+        parallel_neighbours_number = self.parallel_neighbours_counter()  # up to 10
+        not_connected_words_number = self.not_connected_words_counter()  # up to 10
+        incorrect_intersections_number, correct_intersections_number = self.new_intersection_counter()  # incorrect intersection - up to 5, correct intersection - up to 5
+        wrong_corners, correct_corners = self.corner_counter()  # up to 60
+        words_fitting_grid_number = self.words_fit_grid()  # up to 10
+
+        c1 = -4.0  # Coefficient for overlapped words
+        c2 = 1.0  # Coefficient for not overlapped words
+        c3 = -2.0  # Coefficient for parallel neighbors
+        c4 = -2.5  # Coefficient for not connected words
+        c5 = 5.0  # Coefficient for correct intersections
+        c6 = -3.0  # Coefficient for incorrect intersections
+        c7 = 7  # Coefficient for correct corners
+        c8 = -25.0  # Coefficient for incorrect corners
+        c9 = 0.5  # Coefficient for words fitting the grid
+
+        fitness = (
+                c1 * overlapped_words_number +
+                c2 * not_overlapped_words_number +
+                c3 * parallel_neighbours_number +
+                c4 * not_connected_words_number +
+                c5 * correct_intersections_number +
+                c6 * incorrect_intersections_number +
+                c7 * correct_corners +
+                c8 * wrong_corners +
+                c9 * words_fitting_grid_number
+        )
+
+        # self.print_crossword()
+        # print(fitness)
+        # print()
+        return fitness
+
+
+def get_filled_cells(word: Word):
+    filled = set()
+    if word.orientation == 0:
+        for i in range(len(word.word)):
+            filled.add((word.x, word.y + i))
+    else:
+        for i in range(len(word.word)):
+            filled.add((word.x + i, word.y))
+    return filled
+
+
+def if_two_words_parallel(word1: Word, word2: Word):
+    if word1.orientation == 0:
+        if abs(word1.x - word2.x) == 1:
+            cells_of_first_word = set()
+            for k in range(len(word1.word)):
+                cells_of_first_word.add(word1.y + k)
+
+            for k in range(len(word2.word)):
+                if (word2.y + k) in cells_of_first_word:
+                    return True
+    else:
+        if abs(word1.y - word2.y) == 1:
+            cells_of_first_word = set()
+            for k in range(len(word1.word)):
+                cells_of_first_word.add(word1.x + k)
+
+            for k in range(len(word2.word)):
+                if (word2.x + k) in cells_of_first_word:
+                    return True
+    return False
 
 
 def generate_crossword(words) -> Crossword:
@@ -273,38 +342,50 @@ def crossover_population(population, number_of_individuals):
         child_words = parent1.words[:crossover_point] + parent2.words[crossover_point:]
         child = Crossword(child_words)
         new_population.append(child)
+
     return new_population
 
 
-def mutate(population, number_of_individuals):
+def mutate1(population, number_of_individuals):
     new_population = []
     for i in range(number_of_individuals):
         random.seed(i)
-        number_of_changes = random.randint(0, len(population[i].words))
-        orientation_change = math.ceil(number_of_changes/random.randint(2,4))
         crossword = population[i]
-        new_crossword = copy.deepcopy(crossword)
+        coordinate_changes = random.randint(1, len(population[i].words) // 4)
+        coordinate_changes_applied = 0
+        orientation_changes = random.randint(1, len(crossword.words) - 2 * coordinate_changes)
+        orientation_changes_applied = 0
 
-        for j in range(number_of_changes - orientation_change):
-            random.seed(j)
-            candidate1 = new_crossword.words[random.randint(0, math.ceil(len(new_crossword.words) / 2))]
-            candidate2 = new_crossword.words[random.randint(math.ceil(len(new_crossword.words) / 2), len(new_crossword.words) - 1)]
+        old_words = copy.deepcopy(crossword.words)
+        random.shuffle(old_words)
 
-            temp_x, temp_y = candidate1.x, candidate1.y
-            candidate1.x, candidate1.y = candidate2.x, candidate2.y
-            candidate2.x, candidate2.y = temp_x, temp_y
+        new_list_of_words = []
+        while coordinate_changes_applied < coordinate_changes:
+            draft_word1 = old_words.pop(0)
+            draft_word2 = old_words.pop(0)
+            new_word1 = Word(draft_word1, draft_word2.x, draft_word2.y, draft_word1.orientation)
+            new_word2 = Word(draft_word2, draft_word1.x, draft_word1.y, draft_word2.orientation)
+            new_list_of_words.append(new_word1)
+            new_list_of_words.append(new_word2)
+            coordinate_changes_applied += 1
 
-        for j in range(orientation_change):
-            random.seed(j)
-            candidate = new_crossword.words[random.randint(0, len(new_crossword.words) - 1)]
-            if candidate.orientation == 0:
-                candidate.orientation = 1
+        for word in old_words:
+            for new_word in new_list_of_words:
+                if new_word.word == word.word:
+                    old_words.remove(word)
+
+        for word in old_words:
+            if orientation_changes_applied < orientation_changes:
+                new_word = Word(word.word, word.x, word.y, 1 - word.orientation)
+                orientation_changes_applied += 1
             else:
-                candidate.orientation = 0
+                new_word = Word(word.word, word.x, word.y, word.orientation)
+            new_list_of_words.append(new_word)
 
+        new_crossword = Crossword(new_list_of_words)
         new_population.append(new_crossword)
-    return new_population
 
+    return new_population
 
 
 def main():
@@ -314,25 +395,23 @@ def main():
             word = Word(line.strip())
             words.append(word)
 
-    # Generating the population
     population = []
     for _ in range(100):
         crossword = generate_crossword(words)
         population.append(crossword)
-    # for cw in population:
 
-    initial_babe = select_individuals(population,1)[0]
+    initial_babe = population[random.randint(0, len(population) - 1)]
     initial_babe.print_crossword()
     print(initial_babe.fitness)
     print()
 
     generation_counter = 0
-    max_generations = 200
+    max_generations = 8
     while generation_counter < max_generations:
         selected_individuals = select_individuals(population, 10)
         crossovered_individuals = crossover_population(population, 60)
-        mutated_individuals = mutate(population, 30)
-        population = selected_individuals + crossovered_individuals + mutated_individuals
+        mutated_individuals = mutate1(population, 30)
+        population = selected_individuals + mutated_individuals + crossovered_individuals
         generation_counter += 1
 
     best_solution = select_individuals(population, 1)[0]
